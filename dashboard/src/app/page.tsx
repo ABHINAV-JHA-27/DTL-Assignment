@@ -1,3 +1,5 @@
+import { LandingPage } from "@/components/dashboard/LandingPage";
+
 export default function Home() {
-  return <main></main>;
+  return <LandingPage />;
 }
