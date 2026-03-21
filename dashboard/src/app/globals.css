@@ -167,3 +167,11 @@ input {
   gap: 0.5rem;
   align-items: center;
 }
+
+.stage-single-tile video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #020617;
+}

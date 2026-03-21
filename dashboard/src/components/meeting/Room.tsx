@@ -11,6 +11,8 @@ import {
 } from "@livekit/components-react";
 import {
   AlertTriangle,
+  Check,
+  Copy,
   LoaderCircle,
   Radio,
   ShieldAlert,
@@ -117,9 +119,16 @@ function MeetingExperience({
   meeting,
 }: MeetingExperienceProps) {
   const [activePanel, setActivePanel] = useState<MeetingSidebarPanel>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleTogglePanel = (panel: Exclude<MeetingSidebarPanel, null>) => {
     setActivePanel((current) => (current === panel ? null : panel));
+  };
+
+  const handleCopyRoomCode = async () => {
+    await navigator.clipboard.writeText(roomCode);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
   };
 
   return (
@@ -139,7 +148,22 @@ function MeetingExperience({
                   </span>
                 ) : null}
               </div>
-              <h1 className="text-2xl font-semibold text-white">{roomCode}</h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-semibold text-white">{roomCode}</h1>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyRoomCode()}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:border-sky-400/40 hover:bg-sky-400/10 hover:text-sky-100"
+                  aria-label={copied ? "Room code copied" : "Copy room code"}
+                  title={copied ? "Copied" : "Copy room code"}
+                >
+                  {copied ? (
+                    <Check className="h-4.5 w-4.5" />
+                  ) : (
+                    <Copy className="h-4.5 w-4.5" />
+                  )}
+                </button>
+              </div>
             </div>
             <div className="max-w-full truncate rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
               Joined as {username}

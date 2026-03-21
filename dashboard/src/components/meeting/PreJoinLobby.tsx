@@ -8,7 +8,7 @@ import {
   usePreviewTracks,
 } from "@livekit/components-react";
 import { Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { Track, type LocalAudioTrack, type LocalVideoTrack } from "livekit-client";
+import { Track, type LocalAudioTrack } from "livekit-client";
 import { getDefaultUsername } from "@/lib/meeting-code";
 
 const SAVED_NAME_KEY = "meetspace-display-name";
@@ -87,6 +87,7 @@ export function PreJoinLobby({
   const [audioDeviceId, setAudioDeviceId] = useState("default");
   const [videoDeviceId, setVideoDeviceId] = useState("default");
   const [error, setError] = useState<string | null>(null);
+  const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioDevices = useMediaDevices({ kind: "audioinput" });
   const videoDevices = useMediaDevices({ kind: "videoinput" });
@@ -101,7 +102,7 @@ export function PreJoinLobby({
   const previewTracks = usePreviewTracks(
     {
       audio: audioEnabled ? { deviceId: resolvedAudioDeviceId } : false,
-      video: videoEnabled ? { deviceId: resolvedVideoDeviceId } : false,
+      video: false,
     },
     (previewError) => setError(previewError.message),
   );
@@ -113,30 +114,82 @@ export function PreJoinLobby({
       ) as LocalAudioTrack | undefined,
     [previewTracks],
   );
-  const videoTrack = useMemo(
-    () =>
-      previewTracks?.find(
-        (track) => track.kind === Track.Kind.Video,
-      ) as LocalVideoTrack | undefined,
-    [previewTracks],
-  );
   const audioLevels = useMultibandTrackVolume(audioTrack, {
     bands: 12,
     updateInterval: 80,
   });
 
   useEffect(() => {
-    if (!videoRef.current || !videoTrack) {
+    if (!videoRef.current) {
       return;
     }
 
     const element = videoRef.current;
-    videoTrack.attach(element);
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+
+    const clearPreview = () => {
+      const activeStream = element.srcObject;
+      element.pause();
+      element.srcObject = null;
+
+      if (activeStream instanceof MediaStream) {
+        activeStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+
+    if (!videoEnabled) {
+      clearPreview();
+      return;
+    }
+
+    const startPreview = async () => {
+      try {
+        setVideoPreviewError(null);
+        const constraints: MediaStreamConstraints = {
+          audio: false,
+          video:
+            resolvedVideoDeviceId === "default"
+              ? true
+              : { deviceId: { exact: resolvedVideoDeviceId } },
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        element.srcObject = stream;
+        await element.play().catch(() => {
+          // Autoplay can be blocked transiently while the device is warming up.
+        });
+      } catch (previewError) {
+        if (cancelled) {
+          return;
+        }
+
+        clearPreview();
+        setVideoPreviewError(
+          previewError instanceof Error
+            ? previewError.message
+            : "Unable to start the camera preview.",
+        );
+      }
+    };
+
+    void startPreview();
 
     return () => {
-      videoTrack.detach(element);
+      cancelled = true;
+      clearPreview();
+
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
     };
-  }, [videoTrack]);
+  }, [resolvedVideoDeviceId, videoEnabled]);
 
   const handleJoin = () => {
     const nextUsername = username.trim() || getDefaultUsername();
@@ -149,19 +202,20 @@ export function PreJoinLobby({
       videoDeviceId: resolvedVideoDeviceId,
     });
   };
+  const activeError = videoEnabled ? (videoPreviewError ?? error) : error;
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-6 sm:px-6">
       <div className="grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/75 p-4 shadow-2xl shadow-slate-950/50 backdrop-blur sm:p-6">
           <div className="overflow-hidden rounded-[1.7rem] border border-white/10 bg-slate-900">
-            {videoEnabled && videoTrack ? (
+            {videoEnabled ? (
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="aspect-video w-full bg-slate-950 object-cover"
+                className="aspect-video w-full scale-x-[-1] bg-slate-950 object-contain"
               />
             ) : (
               <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_55%)]">
@@ -275,9 +329,9 @@ export function PreJoinLobby({
               </div>
             </div>
 
-            {error ? (
+            {activeError ? (
               <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-                {error}
+                {activeError}
               </div>
             ) : null}
 
