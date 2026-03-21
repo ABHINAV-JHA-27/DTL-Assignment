@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:responsive": "node scripts/verify-responsive.mjs"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",
+    "@livekit/krisp-noise-filter": "^0.3.4",
     "firebase": "^12.11.0",
     "livekit-client": "^2.17.3",
     "livekit-server-sdk": "^2.15.0",
@@ -25,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "playwright": "^1.58.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

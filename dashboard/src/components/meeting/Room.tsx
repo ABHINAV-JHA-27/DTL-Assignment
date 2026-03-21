@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
+import type { LocalUserChoices } from "@livekit/components-react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -10,14 +12,20 @@ import {
 import {
   AlertTriangle,
   LoaderCircle,
+  Radio,
   ShieldAlert,
-  Video,
 } from "lucide-react";
 import { ConnectionState, MediaDeviceFailure } from "livekit-client";
 import { MeetingControls } from "@/components/meeting/MeetingControls";
 import { ParticipantGrid } from "@/components/meeting/ParticipantGrid";
+import { PreJoinLobby } from "@/components/meeting/PreJoinLobby";
 import { Sidebar } from "@/components/meeting/Sidebar";
-import { getDefaultUsername } from "@/lib/meeting-code";
+import {
+  type MeetingSidebarPanel,
+} from "@/components/meeting/MeetingControls";
+import { useMeetingMetadata } from "@/hooks/useMeetingMetadata";
+import { useParticipantToken } from "@/hooks/useParticipantToken";
+import { useRecording } from "@/hooks/useRecording";
 
 type RoomProps = {
   roomCode: string;
@@ -87,68 +95,99 @@ function ConnectionBanner() {
   );
 }
 
-function MeetingNameGate({
-  roomCode,
-  onContinue,
-}: {
+type MeetingExperienceProps = {
   roomCode: string;
-  onContinue: (value: string) => void;
-}) {
-  const [name, setName] = useState(() => {
-    if (typeof window === "undefined") {
-      return getDefaultUsername();
-    }
+  username: string;
+  meetingError: string | null;
+  onToggleRecording: () => Promise<void> | void;
+  isRecording: boolean;
+  isRecordingPending: boolean;
+  recordingError: string | null;
+  meeting: ReturnType<typeof useMeetingMetadata>["meeting"];
+};
 
-    return window.localStorage.getItem("meetspace-display-name") ?? getDefaultUsername();
-  });
+function MeetingExperience({
+  roomCode,
+  username,
+  meetingError,
+  onToggleRecording,
+  isRecording,
+  isRecordingPending,
+  recordingError,
+  meeting,
+}: MeetingExperienceProps) {
+  const [activePanel, setActivePanel] = useState<MeetingSidebarPanel>(null);
 
-  const handleContinue = () => {
-    const value = name.trim() || getDefaultUsername();
-    window.localStorage.setItem("meetspace-display-name", value);
-    onContinue(value);
+  const handleTogglePanel = (panel: Exclude<MeetingSidebarPanel, null>) => {
+    setActivePanel((current) => (current === panel ? null : panel));
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-950/80 p-8 shadow-2xl shadow-slate-950/60 backdrop-blur">
-        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-sky-500/10 text-sky-200">
-          <Video className="h-7 w-7" />
+    <div className="relative min-h-screen lg:h-full lg:min-h-0">
+      <div className="flex min-h-screen flex-col lg:h-full lg:min-h-0">
+        <div className="border-b border-white/10 bg-slate-950/80 px-4 py-4 backdrop-blur lg:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">
+                  Live room
+                </p>
+                {isRecording ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-rose-400/20 bg-rose-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-rose-100">
+                    <Radio className="h-3.5 w-3.5 fill-current text-rose-400" />
+                    Rec
+                  </span>
+                ) : null}
+              </div>
+              <h1 className="text-2xl font-semibold text-white">{roomCode}</h1>
+            </div>
+            <div className="max-w-full truncate rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
+              Joined as {username}
+            </div>
+          </div>
+          {meetingError ? (
+            <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              {meetingError}
+            </div>
+          ) : null}
         </div>
-        <p className="mt-6 text-sm uppercase tracking-[0.24em] text-slate-400">
-          Meeting room
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">{roomCode}</h1>
-        <p className="mt-3 text-slate-300">
-          Add a display name before joining the room.
-        </p>
-        <label className="mt-6 block space-y-2">
-          <span className="text-sm font-medium text-slate-300">Your name</span>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Add your display name"
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-sky-400/60 focus:bg-white/8"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={handleContinue}
-          className="mt-6 w-full rounded-2xl bg-sky-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-sky-400"
-        >
-          Join meeting
-        </button>
+
+        <ConnectionBanner />
+
+        <div className="min-h-0 flex-1 p-3 sm:p-4 lg:p-6">
+          <ParticipantGrid />
+        </div>
+
+        <MeetingControls
+          activePanel={activePanel}
+          onTogglePanel={handleTogglePanel}
+          isRecording={isRecording}
+          isRecordingPending={isRecordingPending}
+          recordingError={recordingError}
+          onToggleRecording={onToggleRecording}
+        />
       </div>
+
+      <Sidebar
+        roomCode={roomCode}
+        panel={activePanel}
+        isOpen={activePanel !== null}
+        onClose={() => setActivePanel(null)}
+        onSelectPanel={setActivePanel}
+        meeting={meeting}
+      />
     </div>
   );
 }
 
 export function Room({ roomCode, initialUsername = "" }: RoomProps) {
   const router = useRouter();
-  const [username, setUsername] = useState(() => {
-    const normalizedInitialUsername = initialUsername.trim();
-
-    if (normalizedInitialUsername) {
-      return normalizedInitialUsername;
+  const [userChoices, setUserChoices] = useState<LocalUserChoices | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [fallbackUsername] = useState(() => {
+    if (initialUsername.trim()) {
+      return initialUsername.trim();
     }
 
     if (typeof window === "undefined") {
@@ -157,88 +196,43 @@ export function Room({ roomCode, initialUsername = "" }: RoomProps) {
 
     return window.localStorage.getItem("meetspace-display-name") ?? "";
   });
-  const [token, setToken] = useState<string | null>(null);
-  const [serverUrl, setServerUrl] = useState(process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [permissionDenied, setPermissionDenied] = useState(false);
+  const { meeting, error: meetingError } = useMeetingMetadata(roomCode);
+  const username = userChoices?.username || fallbackUsername;
+  const {
+    token,
+    serverUrl,
+    isLoading,
+    error: tokenError,
+  } = useParticipantToken({
+    roomCode,
+    username,
+    enabled: Boolean(userChoices && username),
+  });
+  const { isPending: isRecordingPending, error: recordingError, toggleRecording } =
+    useRecording({
+      roomCode,
+      username,
+      isRecording: meeting?.recording?.isRecording ?? false,
+      egressId: meeting?.recording?.egressId ?? null,
+    });
 
-  useEffect(() => {
-    if (!username) {
-      return;
-    }
-
-    let isCancelled = false;
-    const controller = new AbortController();
-
-    const loadToken = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams({
-          room: roomCode,
-          username,
-        });
-        const response = await fetch(
-          `/api/get-participant-token?${params.toString()}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-        const data = (await response.json()) as
-          | { token?: string; serverUrl?: string; error?: string }
-          | undefined;
-
-        if (!response.ok) {
-          throw new Error(data?.error ?? "Unable to create a participant token.");
-        }
-
-        if (!data?.token || !data.serverUrl) {
-          throw new Error("LiveKit token response was incomplete.");
-        }
-
-        if (!isCancelled) {
-          setToken(data.token);
-          setServerUrl(data.serverUrl);
-        }
-      } catch (requestError) {
-        if (controller.signal.aborted || isCancelled) {
-          return;
-        }
-
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Unable to connect to the room.",
-        );
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadToken();
-
-    return () => {
-      isCancelled = true;
-      controller.abort();
-    };
-  }, [roomCode, username]);
-
-  if (!username) {
-    return <MeetingNameGate roomCode={roomCode} onContinue={setUsername} />;
+  if (!userChoices) {
+    return (
+      <PreJoinLobby
+        roomCode={roomCode}
+        initialUsername={fallbackUsername}
+        onSubmit={setUserChoices}
+      />
+    );
   }
 
   if (isLoading || !token || !serverUrl) {
-    if (error) {
+    if (tokenError || error) {
       return (
         <StatePanel
           icon={<AlertTriangle className="h-7 w-7" />}
           title="Unable to join meeting"
-          description={error}
+          description={tokenError ?? error ?? "Unable to join meeting"}
           actionLabel="Back to dashboard"
           onAction={() => router.push("/")}
         />
@@ -270,10 +264,19 @@ export function Room({ roomCode, initialUsername = "" }: RoomProps) {
     <LiveKitRoom
       token={token}
       serverUrl={serverUrl}
-      connect
-      audio
-      video
+      connect={Boolean(userChoices && token)}
+      audio={
+        userChoices.audioEnabled
+          ? { deviceId: userChoices.audioDeviceId }
+          : false
+      }
+      video={
+        userChoices.videoEnabled
+          ? { deviceId: userChoices.videoDeviceId }
+          : false
+      }
       onDisconnected={() => router.push("/")}
+      onError={(roomError) => setError(roomError.message)}
       onMediaDeviceFailure={(failure) => {
         if (failure === MediaDeviceFailure.PermissionDenied) {
           setPermissionDenied(true);
@@ -282,38 +285,20 @@ export function Room({ roomCode, initialUsername = "" }: RoomProps) {
 
         setError("We couldn't access your media devices.");
       }}
-      className="h-screen bg-transparent text-white"
+      className="min-h-screen bg-transparent text-white lg:h-screen"
       data-lk-theme="default"
     >
       <RoomAudioRenderer />
-
-      <div className="flex h-full flex-col lg:flex-row">
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="border-b border-white/10 bg-slate-950/80 px-4 py-4 backdrop-blur lg:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">
-                  Live room
-                </p>
-                <h1 className="text-2xl font-semibold text-white">{roomCode}</h1>
-              </div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
-                Joined as {username}
-              </div>
-            </div>
-          </div>
-
-          <ConnectionBanner />
-
-          <div className="min-h-0 flex-1 p-4 lg:p-6">
-            <ParticipantGrid />
-          </div>
-
-          <MeetingControls />
-        </div>
-
-        <Sidebar roomCode={roomCode} />
-      </div>
+      <MeetingExperience
+        roomCode={roomCode}
+        username={username}
+        meetingError={meetingError}
+        onToggleRecording={toggleRecording}
+        isRecording={meeting?.recording?.isRecording ?? false}
+        isRecordingPending={isRecordingPending}
+        recordingError={recordingError}
+        meeting={meeting}
+      />
     </LiveKitRoom>
   );
 }

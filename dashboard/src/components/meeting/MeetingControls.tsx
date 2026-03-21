@@ -5,12 +5,18 @@ import { useState } from "react";
 import {
   Mic,
   MicOff,
+  MessageSquareText,
   MonitorUp,
   PhoneOff,
+  Radio,
+  Settings2,
+  Users,
   Video,
   VideoOff,
 } from "lucide-react";
 import { useLocalParticipant, useRoomContext } from "@livekit/components-react";
+
+export type MeetingSidebarPanel = "people" | "chat" | "settings" | null;
 
 type ControlButtonProps = {
   icon: React.ReactNode;
@@ -19,6 +25,7 @@ type ControlButtonProps = {
   variant?: "default" | "danger";
   active?: boolean;
   disabled?: boolean;
+  compact?: boolean;
 };
 
 function ControlButton({
@@ -28,9 +35,12 @@ function ControlButton({
   variant = "default",
   active = false,
   disabled = false,
+  compact = false,
 }: ControlButtonProps) {
   const baseStyles =
-    "flex min-w-28 items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition";
+    compact
+      ? "flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition sm:w-auto"
+      : "flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition sm:min-w-28 sm:w-auto";
   const activeStyles =
     variant === "danger"
       ? "border-rose-400/20 bg-rose-500 text-white hover:bg-rose-400"
@@ -51,7 +61,23 @@ function ControlButton({
   );
 }
 
-export function MeetingControls() {
+type MeetingControlsProps = {
+  activePanel: MeetingSidebarPanel;
+  onTogglePanel: (panel: Exclude<MeetingSidebarPanel, null>) => void;
+  isRecording: boolean;
+  isRecordingPending: boolean;
+  recordingError: string | null;
+  onToggleRecording: () => Promise<void> | void;
+};
+
+export function MeetingControls({
+  activePanel,
+  onTogglePanel,
+  isRecording,
+  isRecordingPending,
+  recordingError,
+  onToggleRecording,
+}: MeetingControlsProps) {
   const router = useRouter();
   const room = useRoomContext();
   const {
@@ -109,7 +135,7 @@ export function MeetingControls() {
 
   return (
     <div className="border-t border-white/10 bg-slate-950/80 px-4 py-4 backdrop-blur lg:px-6">
-      <div className="flex flex-wrap items-center justify-center gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center">
         <ControlButton
           icon={
             isMicrophoneEnabled ? (
@@ -148,6 +174,21 @@ export function MeetingControls() {
           disabled={isTogglingScreenShare}
         />
         <ControlButton
+          icon={<Radio className="h-4 w-4" />}
+          label={
+            isRecordingPending
+              ? isRecording
+                ? "Stopping..."
+                : "Starting..."
+              : isRecording
+                ? "Stop Recording"
+                : "Record Meeting"
+          }
+          onClick={onToggleRecording}
+          active={isRecording}
+          disabled={isRecordingPending}
+        />
+        <ControlButton
           icon={<PhoneOff className="h-4 w-4" />}
           label={isLeaving ? "Leaving..." : "Leave Meeting"}
           onClick={leaveMeeting}
@@ -156,9 +197,39 @@ export function MeetingControls() {
         />
       </div>
 
+      <div className="mt-3 grid grid-cols-3 gap-3 sm:flex sm:justify-center">
+        <ControlButton
+          icon={<Users className="h-4 w-4" />}
+          label="People"
+          onClick={() => onTogglePanel("people")}
+          active={activePanel === "people"}
+          compact
+        />
+        <ControlButton
+          icon={<MessageSquareText className="h-4 w-4" />}
+          label="Chat"
+          onClick={() => onTogglePanel("chat")}
+          active={activePanel === "chat"}
+          compact
+        />
+        <ControlButton
+          icon={<Settings2 className="h-4 w-4" />}
+          label="Settings"
+          onClick={() => onTogglePanel("settings")}
+          active={activePanel === "settings"}
+          compact
+        />
+      </div>
+
       {screenShareError ? (
         <div className="mx-auto mt-3 max-w-xl rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-center text-sm text-amber-100">
           {screenShareError}
+        </div>
+      ) : null}
+
+      {recordingError ? (
+        <div className="mx-auto mt-3 max-w-xl rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-center text-sm text-rose-100">
+          {recordingError}
         </div>
       ) : null}
     </div>

@@ -139,8 +139,8 @@ export function LandingPage() {
     <main className="relative min-h-screen overflow-hidden text-slate-50">
       <div className="absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_55%)]" />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-10 lg:px-10">
-        <header className="flex items-center justify-between">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+        <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/30 bg-sky-400/10 text-sky-200">
               <Video className="h-5 w-5" />
@@ -161,18 +161,20 @@ export function LandingPage() {
           </div>
         </header>
 
-        <section className="grid flex-1 items-center gap-10 py-12 lg:grid-cols-[1.1fr_0.9fr]">
+        <section className="grid flex-1 items-center gap-10 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-12">
           <div className="space-y-8">
             <div className="space-y-5">
-              <p className="inline-flex items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm text-sky-100">
+              <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-sky-400/20 bg-sky-400/10 px-4 py-2 text-sm text-sky-100">
                 <CalendarClock className="h-4 w-4" />
-                Spin up a room in seconds and share the code instantly.
+                <span className="min-w-0">
+                  Spin up a room in seconds and share the code instantly.
+                </span>
               </p>
               <div className="space-y-4">
-                <h2 className="max-w-2xl text-4xl font-semibold tracking-tight text-white md:text-6xl">
+                <h2 className="max-w-2xl text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl">
                   Run secure video meetings with a clean control-room workflow.
                 </h2>
-                <p className="max-w-2xl text-lg leading-8 text-slate-300">
+                <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
                   Create a room, validate join codes against Firebase, and drop
                   participants straight into a LiveKit-powered meeting shell.
                 </p>
@@ -180,7 +182,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 shadow-2xl shadow-sky-950/40 backdrop-blur xl:p-8">
+          <div className="rounded-[2rem] border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-sky-950/40 backdrop-blur sm:p-6 xl:p-8">
             <div className="space-y-6">
               <div className="space-y-2">
                 <p className="text-sm uppercase tracking-[0.24em] text-slate-400">

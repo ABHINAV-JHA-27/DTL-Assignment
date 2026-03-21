@@ -1,0 +1,53 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - livekit
+      - redis
+      - minio
+      - createbucket
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml
+    depends_on:
+      - redis
+    volumes:
+      - ./docker/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50010:50000-50010/udp"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${RECORDING_S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${RECORDING_S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${RECORDING_S3_ACCESS_KEY:-minioadmin} ${RECORDING_S3_SECRET_KEY:-minioadmin}; do sleep 2; done;
+      mc mb --ignore-existing local/${RECORDING_S3_BUCKET:-livekit-recordings};
+      mc anonymous set private local/${RECORDING_S3_BUCKET:-livekit-recordings};
+      exit 0;
+      "
