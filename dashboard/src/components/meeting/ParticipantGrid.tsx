@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ParticipantTile,
   VideoTrack,
   isTrackReference,
   useTracks,
@@ -9,12 +8,16 @@ import {
 import { LayoutGrid } from "lucide-react";
 import { Track } from "livekit-client";
 
-function SingleStageTile({
+function TrackTile({
   track,
   highlighted = false,
+  fit = "cover",
+  className = "",
 }: {
   track: ReturnType<typeof useTracks>[number];
   highlighted?: boolean;
+  fit?: "contain" | "cover";
+  className?: string;
 }) {
   if (!isTrackReference(track)) {
     return null;
@@ -26,13 +29,15 @@ function SingleStageTile({
 
   return (
     <div
-      className={`stage-single-tile relative h-full overflow-hidden rounded-[1.4rem] border bg-slate-950 ${
+      className={`relative overflow-hidden rounded-[1.4rem] border bg-slate-950 ${
         highlighted ? "border-sky-400/20" : "border-white/10"
-      }`}
+      } ${className}`}
     >
       <VideoTrack
         trackRef={track}
-        className="h-full w-full bg-slate-950 object-contain"
+        className={`h-full w-full bg-slate-950 ${
+          fit === "contain" ? "object-contain" : "object-cover"
+        }`}
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent px-4 pb-4 pt-10">
         <div className="flex items-center justify-between gap-3 text-sm text-slate-100">
@@ -89,7 +94,7 @@ export function ParticipantGrid() {
 
     return (
       <div className="h-full min-h-[18rem] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 p-2 shadow-2xl shadow-slate-950/50 sm:min-h-[24rem] sm:p-3 lg:min-h-[28rem]">
-        <SingleStageTile track={onlyTrack} />
+        <TrackTile track={onlyTrack} fit="contain" className="h-full" />
       </div>
     );
   }
@@ -98,7 +103,12 @@ export function ParticipantGrid() {
     if (secondaryTracks.length === 0) {
       return (
         <div className="h-full min-h-[18rem] overflow-hidden rounded-[2rem] border border-sky-400/20 bg-slate-950/70 p-2 shadow-2xl shadow-slate-950/50 sm:min-h-[24rem] sm:p-3 lg:min-h-[28rem]">
-          <SingleStageTile track={primaryTrack} highlighted />
+          <TrackTile
+            track={primaryTrack}
+            highlighted
+            fit="contain"
+            className="h-full"
+          />
         </div>
       );
     }
@@ -106,18 +116,20 @@ export function ParticipantGrid() {
     return (
       <div className="grid h-full min-h-[18rem] gap-3 sm:min-h-[24rem] lg:min-h-[28rem] lg:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
         <div className="min-h-[18rem] overflow-hidden rounded-[2rem] border border-sky-400/20 bg-slate-950/70 p-2 shadow-2xl shadow-slate-950/50 sm:min-h-[24rem] sm:p-3 lg:min-h-[28rem]">
-          <ParticipantTile
-            trackRef={primaryTrack}
-            className="h-full overflow-hidden rounded-[1.4rem] border border-sky-400/20 bg-slate-900"
+          <TrackTile
+            track={primaryTrack}
+            highlighted
+            fit="contain"
+            className="h-full"
           />
         </div>
 
-        <div className="grid min-h-[14rem] auto-rows-fr gap-3">
+        <div className="grid content-start gap-3">
           {secondaryTracks.map((track) => (
-            <ParticipantTile
+            <TrackTile
               key={track.publication?.trackSid ?? `${track.participant.sid}-${track.source}`}
-              trackRef={track}
-              className="min-h-[10rem] overflow-hidden rounded-[1.4rem] border border-white/10 bg-slate-900"
+              track={track}
+              className="aspect-video min-h-[12rem]"
             />
           ))}
         </div>
@@ -127,12 +139,12 @@ export function ParticipantGrid() {
 
   return (
     <div className="h-full min-h-[18rem] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 p-2 shadow-2xl shadow-slate-950/50 sm:min-h-[24rem] sm:p-3 lg:min-h-[28rem]">
-      <div className="grid h-full auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid content-start gap-3 md:grid-cols-2 xl:grid-cols-3">
         {secondaryTracks.map((track) => (
-          <ParticipantTile
+          <TrackTile
             key={track.publication?.trackSid ?? `${track.participant.sid}-${track.source}`}
-            trackRef={track}
-            className="overflow-hidden rounded-[1.4rem] border border-white/10 bg-slate-900"
+            track={track}
+            className="aspect-video min-h-[12rem]"
           />
         ))}
       </div>
