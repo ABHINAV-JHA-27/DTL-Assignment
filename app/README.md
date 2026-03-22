@@ -50,12 +50,11 @@ The current repo exposes `GET /api/get-participant-token?room={code}&username={n
 
 The dashboard currently validates meeting existence directly against Firebase on the web client and does **not** expose a dedicated mobile validation route yet. If you need strict room existence checks before the lobby, add a Next.js route backed by the same datastore and point `AppConfig.validationPath` to it.
 
-## Base URLs
+## Base URL
 
-- Android emulator: `http://10.0.2.2:3000`
-- iOS simulator: `http://localhost:3000`
+The mobile app is currently configured to use the deployed Next.js backend:
 
-Those defaults are already encoded in `AppConfig`.
+- `https://dtl-assignment.vercel.app`
 
 ## Native permission setup
 

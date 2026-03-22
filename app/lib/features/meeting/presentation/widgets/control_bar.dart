@@ -30,7 +30,7 @@ class MeetingControlBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xCC07111B),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Wrap(
           alignment: WrapAlignment.center,
@@ -89,7 +89,7 @@ class _ActionButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: isDanger
             ? const Color(0x33F87171)
-            : Colors.white.withOpacity(0.08),
+            : Colors.white.withValues(alpha: 0.08),
         foregroundColor: isDanger ? const Color(0xFFFDA4AF) : Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),

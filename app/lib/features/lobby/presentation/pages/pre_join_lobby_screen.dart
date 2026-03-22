@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' as lk;
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/services/permission_service.dart';
@@ -9,6 +9,8 @@ import '../../../meeting/data/services/livekit_service.dart';
 import '../../../meeting/data/services/meeting_api_service.dart';
 import '../../../meeting/presentation/cubit/meeting_cubit.dart';
 import '../../../meeting/presentation/pages/meeting_room_page.dart';
+import '../widgets/lobby_preview_card.dart';
+import '../widgets/lobby_settings_card.dart';
 
 class PreJoinLobbyScreen extends StatefulWidget {
   const PreJoinLobbyScreen({
@@ -23,7 +25,7 @@ class PreJoinLobbyScreen extends StatefulWidget {
 }
 
 class _PreJoinLobbyScreenState extends State<PreJoinLobbyScreen> {
-  LocalVideoTrack? _previewTrack;
+  lk.LocalVideoTrack? _previewTrack;
   bool _microphoneEnabled = true;
   bool _cameraEnabled = true;
   bool _busy = true;
@@ -70,7 +72,7 @@ class _PreJoinLobbyScreenState extends State<PreJoinLobbyScreen> {
       return;
     }
 
-    final track = await LocalVideoTrack.createCameraTrack();
+    final track = await lk.LocalVideoTrack.createCameraTrack();
     if (!mounted) {
       await track.dispose();
       return;
@@ -152,7 +154,7 @@ class _PreJoinLobbyScreenState extends State<PreJoinLobbyScreen> {
               children: [
                 Expanded(
                   flex: 3,
-                  child: _PreviewCard(
+                  child: LobbyPreviewCard(
                     track: _previewTrack,
                     isBusy: _busy,
                     cameraEnabled: _cameraEnabled,
@@ -161,7 +163,7 @@ class _PreJoinLobbyScreenState extends State<PreJoinLobbyScreen> {
                 SizedBox(width: wide ? 20 : 0, height: wide ? 0 : 20),
                 Expanded(
                   flex: 2,
-                  child: _LobbySettings(
+                  child: LobbySettingsCard(
                     access: widget.access,
                     microphoneEnabled: _microphoneEnabled,
                     cameraEnabled: _cameraEnabled,
@@ -178,150 +180,6 @@ class _PreJoinLobbyScreenState extends State<PreJoinLobbyScreen> {
               ],
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({
-    required this.track,
-    required this.isBusy,
-    required this.cameraEnabled,
-  });
-
-  final LocalVideoTrack? track;
-  final bool isBusy;
-  final bool cameraEnabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF040B14), Color(0xFF0D1B2A)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Center(
-          child: isBusy
-              ? const CircularProgressIndicator()
-              : !cameraEnabled || track == null
-                  ? const _PreviewPlaceholder()
-                  : VideoTrackRenderer(
-                      track!,
-                      fit: VideoViewFit.cover,
-                      mirrorMode: VideoViewMirrorMode.mirror,
-                    ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PreviewPlaceholder extends StatelessWidget {
-  const _PreviewPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.videocam_off_rounded, size: 72, color: Colors.white54),
-          SizedBox(height: 16),
-          Text(
-            'Camera preview is off',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Turn the camera back on to check framing before joining the room.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LobbySettings extends StatelessWidget {
-  const _LobbySettings({
-    required this.access,
-    required this.microphoneEnabled,
-    required this.cameraEnabled,
-    required this.errorMessage,
-    required this.onToggleMicrophone,
-    required this.onToggleCamera,
-    required this.onJoin,
-  });
-
-  final MeetingAccess access;
-  final bool microphoneEnabled;
-  final bool cameraEnabled;
-  final String? errorMessage;
-  final VoidCallback onToggleMicrophone;
-  final VoidCallback? onToggleCamera;
-  final VoidCallback? onJoin;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              access.roomCode,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Joining as ${access.username}',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 24),
-            SwitchListTile.adaptive(
-              value: microphoneEnabled,
-              onChanged: (_) => onToggleMicrophone(),
-              title: const Text('Microphone'),
-              subtitle: Text(microphoneEnabled ? 'Start unmuted' : 'Start muted'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            SwitchListTile.adaptive(
-              value: cameraEnabled,
-              onChanged: onToggleCamera == null ? null : (_) => onToggleCamera!(),
-              title: const Text('Camera'),
-              subtitle: Text(cameraEnabled ? 'Join with video' : 'Join audio-only'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            if (errorMessage != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0x33F87171),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(errorMessage!),
-              ),
-            ],
-            const Spacer(),
-            ElevatedButton(
-              onPressed: onJoin,
-              child: const Text('Join Meeting'),
-            ),
-          ],
         ),
       ),
     );

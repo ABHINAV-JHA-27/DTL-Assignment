@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/widgets/state_panel.dart';
 import '../cubit/meeting_cubit.dart';
 import '../cubit/meeting_state.dart';
 import '../widgets/meeting_room.dart';
@@ -40,27 +41,35 @@ class MeetingRoomPage extends StatelessWidget {
         switch (state.status) {
           case MeetingStatus.initial:
           case MeetingStatus.connecting:
-            return const _StateScaffold(
-              title: 'Preparing your room',
-              subtitle: 'Requesting permissions, connecting to LiveKit, and starting media devices.',
-              child: CircularProgressIndicator(),
+            return const Scaffold(
+              body: StatePanel(
+                title: 'Preparing your room',
+                subtitle:
+                    'Requesting permissions, connecting to LiveKit, and starting media devices.',
+                child: CircularProgressIndicator(),
+              ),
             );
           case MeetingStatus.permissionDenied:
-            return _StateScaffold(
-              title: 'Permission denied',
-              subtitle: 'Allow camera and microphone access, then rejoin the meeting.',
-              child: IconButton.filled(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded),
+            return Scaffold(
+              body: StatePanel(
+                title: 'Permission denied',
+                subtitle:
+                    'Allow camera and microphone access, then rejoin the meeting.',
+                child: IconButton.filled(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
               ),
             );
           case MeetingStatus.failure:
-            return _StateScaffold(
-              title: 'Unable to join meeting',
-              subtitle: state.errorMessage ?? 'Connection failed.',
-              child: IconButton.filled(
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_rounded),
+            return Scaffold(
+              body: StatePanel(
+                title: 'Unable to join meeting',
+                subtitle: state.errorMessage ?? 'Connection failed.',
+                child: IconButton.filled(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
               ),
             );
           case MeetingStatus.connected:
@@ -87,55 +96,6 @@ class MeetingRoomPage extends StatelessWidget {
             return const SizedBox.shrink();
         }
       },
-    );
-  }
-}
-
-class _StateScaffold extends StatelessWidget {
-  const _StateScaffold({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    child,
-                    const SizedBox(height: 20),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

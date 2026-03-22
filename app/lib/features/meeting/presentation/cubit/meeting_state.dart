@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' as lk;
 
-import '../../data/models/chat_message.dart';
+import '../../data/models/chat_message.dart' as models;
 import '../../data/models/meeting_access.dart';
 
 enum MeetingStatus {
@@ -26,9 +26,9 @@ class MeetingState extends Equatable {
   });
 
   final MeetingStatus status;
-  final Room? room;
+  final lk.Room? room;
   final MeetingAccess? access;
-  final List<ChatMessage> messages;
+  final List<models.ChatMessage> messages;
   final bool isMicrophoneEnabled;
   final bool isCameraEnabled;
   final String? errorMessage;
@@ -36,9 +36,9 @@ class MeetingState extends Equatable {
 
   MeetingState copyWith({
     MeetingStatus? status,
-    Room? room,
+    lk.Room? room,
     MeetingAccess? access,
-    List<ChatMessage>? messages,
+    List<models.ChatMessage>? messages,
     bool? isMicrophoneEnabled,
     bool? isCameraEnabled,
     String? errorMessage,

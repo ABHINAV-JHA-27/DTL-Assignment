@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' as lk;
 
 class ParticipantTile extends StatelessWidget {
   const ParticipantTile({
@@ -8,7 +8,7 @@ class ParticipantTile extends StatelessWidget {
     super.key,
   });
 
-  final Participant participant;
+  final lk.Participant participant;
   final bool isLocal;
 
   @override
@@ -17,14 +17,16 @@ class ParticipantTile extends StatelessWidget {
       animation: participant,
       builder: (context, _) {
         final publication = participant.getTrackPublicationBySource(
-              TrackSource.camera,
+              lk.TrackSource.camera,
             ) ??
-            participant.getTrackPublicationBySource(TrackSource.screenShareVideo);
+            participant.getTrackPublicationBySource(
+              lk.TrackSource.screenShareVideo,
+            );
         final track = publication?.track;
-        final name = (participant.name?.trim().isNotEmpty ?? false)
-            ? participant.name!.trim()
-            : participant.identity;
-        final isVideoAvailable = track is VideoTrack && !(publication?.muted ?? true);
+        final participantName = participant.name.trim();
+        final name =
+            participantName.isNotEmpty ? participantName : participant.identity;
+        final videoTrack = track is lk.VideoTrack ? track : null;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(24),
@@ -39,13 +41,13 @@ class ParticipantTile extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (isVideoAvailable)
-                  VideoTrackRenderer(
-                    track as VideoTrack,
-                    fit: VideoViewFit.cover,
+                if (videoTrack != null && !(publication?.muted ?? true))
+                  lk.VideoTrackRenderer(
+                    videoTrack,
+                    fit: lk.VideoViewFit.cover,
                     mirrorMode: isLocal
-                        ? VideoViewMirrorMode.mirror
-                        : VideoViewMirrorMode.off,
+                        ? lk.VideoViewMirrorMode.mirror
+                        : lk.VideoViewMirrorMode.off,
                   )
                 else
                   _ParticipantPlaceholder(name: name),
@@ -62,7 +64,7 @@ class ParticipantTile extends StatelessWidget {
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.55),
+                            color: Colors.black.withValues(alpha: 0.55),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(

@@ -36,7 +36,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: _surfaceHigh.withOpacity(0.72),
+        fillColor: _surfaceHigh.withValues(alpha: 0.72),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(22),
           borderSide: const BorderSide(color: _outline),

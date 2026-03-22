@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:livekit_client/livekit_client.dart';
+import 'package:livekit_client/livekit_client.dart' as lk;
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/services/permission_service.dart';
-import '../../data/models/chat_message.dart';
+import '../../data/models/chat_message.dart' as models;
 import '../../data/models/meeting_access.dart';
 import '../../data/services/livekit_service.dart';
 import '../../data/services/meeting_api_service.dart';
@@ -23,7 +23,7 @@ class MeetingCubit extends Cubit<MeetingState> {
   final LiveKitService _liveKitService;
   final PermissionService _permissionService;
 
-  EventsListener<RoomEvent>? _roomEventsListener;
+  lk.EventsListener<lk.RoomEvent>? _roomEventsListener;
 
   Future<void> connect({
     required MeetingAccess access,
@@ -141,7 +141,7 @@ class MeetingCubit extends Cubit<MeetingState> {
       return;
     }
 
-    final message = ChatMessage(
+    final message = models.ChatMessage(
       sender: access.username,
       message: trimmed,
       timestamp: DateTime.now(),
@@ -179,10 +179,10 @@ class MeetingCubit extends Cubit<MeetingState> {
     emit(state.copyWith(clearFeedback: true));
   }
 
-  void _bindRoom(Room room) {
+  void _bindRoom(lk.Room room) {
     _roomEventsListener = room.createListener()
       ..listen((event) async {
-        if (event is DataReceivedEvent) {
+        if (event is lk.DataReceivedEvent) {
           final chatMessage = _liveKitService.parseChatMessage(event);
           if (chatMessage != null) {
             emit(
@@ -194,7 +194,7 @@ class MeetingCubit extends Cubit<MeetingState> {
           }
         }
 
-        if (event is RoomDisconnectedEvent) {
+        if (event is lk.RoomDisconnectedEvent) {
           emit(
             state.copyWith(
               status: MeetingStatus.ended,
