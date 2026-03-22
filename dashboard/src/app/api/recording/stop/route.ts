@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getMeeting,
+  updateMeetingRecordingState,
+} from "@/lib/firebase/meetings";
 import { createEgressClient } from "@/lib/livekit/server";
+import { isMeetingCodeFormatValid, normalizeMeetingCode } from "@/lib/meeting-code";
 
 export const runtime = "nodejs";
 
@@ -9,12 +14,28 @@ export async function POST(request: NextRequest) {
       room?: string;
       egressId?: string | null;
     };
-    const room = body.room?.trim();
+    const room = normalizeMeetingCode(body.room?.trim() ?? "");
 
     if (!room) {
       return NextResponse.json(
         { error: "room is required." },
         { status: 400 },
+      );
+    }
+
+    if (!isMeetingCodeFormatValid(room)) {
+      return NextResponse.json(
+        { error: "Enter a valid 9-character meeting code." },
+        { status: 400 },
+      );
+    }
+
+    const meeting = await getMeeting(room);
+
+    if (!meeting) {
+      return NextResponse.json(
+        { error: "Meeting code not found. Check the code and try again." },
+        { status: 404 },
       );
     }
 
@@ -29,13 +50,26 @@ export async function POST(request: NextRequest) {
       )[0]?.egressId;
 
     if (!targetEgressId) {
+      await updateMeetingRecordingState(room, {
+        isRecording: false,
+        egressId: null,
+        startedBy: null,
+      });
+
       return NextResponse.json(
-        { error: "No active recording found for this room." },
-        { status: 404 },
+        {
+          egressId: null,
+          status: "EGRESS_COMPLETE",
+        },
       );
     }
 
     const info = await egressClient.stopEgress(targetEgressId);
+    await updateMeetingRecordingState(room, {
+      isRecording: false,
+      egressId: null,
+      startedBy: null,
+    });
 
     return NextResponse.json({
       egressId: info.egressId,

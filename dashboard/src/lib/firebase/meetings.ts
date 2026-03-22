@@ -2,13 +2,14 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
-  type DocumentData,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
+import { generateMeetingCode } from "@/lib/meeting-code";
 
 export type MeetingRecordingState = {
   isRecording: boolean;
@@ -25,9 +26,8 @@ export type MeetingRecord = {
   recording: MeetingRecordingState;
 };
 
-export async function createMeeting(code: string, createdBy: string) {
-  const meetingRef = doc(getFirebaseDb(), "meetings", code);
-  const payload: MeetingRecord = {
+function buildMeetingRecord(code: string, createdBy: string): MeetingRecord {
+  return {
     code,
     createdAt: serverTimestamp(),
     createdBy,
@@ -39,12 +39,44 @@ export async function createMeeting(code: string, createdBy: string) {
       startedBy: null,
     },
   };
+}
+
+export async function createMeeting(code: string, createdBy: string) {
+  const meetingRef = doc(getFirebaseDb(), "meetings", code);
+  const payload = buildMeetingRecord(code, createdBy);
 
   await setDoc(meetingRef, payload);
   return payload;
 }
 
-export async function getMeeting(code: string) {
+export async function createMeetingWithGeneratedCode(createdBy: string) {
+  const db = getFirebaseDb();
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateMeetingCode();
+    const meetingRef = doc(db, "meetings", code);
+    const payload = buildMeetingRecord(code, createdBy);
+
+    const created = await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(meetingRef);
+
+      if (snapshot.exists()) {
+        return null;
+      }
+
+      transaction.set(meetingRef, payload);
+      return payload;
+    });
+
+    if (created) {
+      return created;
+    }
+  }
+
+  throw new Error("Unable to reserve a meeting code. Please try again.");
+}
+
+export async function getMeeting(code: string): Promise<MeetingRecord | null> {
   const meetingRef = doc(getFirebaseDb(), "meetings", code);
   const snapshot = await getDoc(meetingRef);
 
@@ -52,7 +84,7 @@ export async function getMeeting(code: string) {
     return null;
   }
 
-  return snapshot.data() as DocumentData;
+  return snapshot.data() as MeetingRecord;
 }
 
 export async function meetingExists(code: string) {

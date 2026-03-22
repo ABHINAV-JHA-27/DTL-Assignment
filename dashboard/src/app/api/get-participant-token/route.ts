@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AccessToken } from "livekit-server-sdk";
+import { getMeeting } from "@/lib/firebase/meetings";
+import { isMeetingCodeFormatValid, normalizeMeetingCode } from "@/lib/meeting-code";
 
 export const runtime = "nodejs";
 
@@ -15,7 +17,9 @@ function createParticipantIdentity(username: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const room = request.nextUrl.searchParams.get("room")?.trim();
+  const room = normalizeMeetingCode(
+    request.nextUrl.searchParams.get("room")?.trim() ?? "",
+  );
   const username = request.nextUrl.searchParams.get("username")?.trim();
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -28,6 +32,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (!isMeetingCodeFormatValid(room)) {
+    return NextResponse.json(
+      { error: "Enter a valid 9-character meeting code." },
+      { status: 400 },
+    );
+  }
+
   if (!apiKey || !apiSecret || !serverUrl) {
     return NextResponse.json(
       { error: "LiveKit server environment variables are not configured." },
@@ -36,6 +47,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const meeting = await getMeeting(room);
+
+    if (!meeting) {
+      return NextResponse.json(
+        { error: "Meeting code not found. Check the code and try again." },
+        { status: 404 },
+      );
+    }
+
     const identity = createParticipantIdentity(username);
     const token = new AccessToken(apiKey, apiSecret, {
       identity,

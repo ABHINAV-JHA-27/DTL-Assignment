@@ -220,7 +220,11 @@ export function Room({ roomCode, initialUsername = "" }: RoomProps) {
 
     return window.localStorage.getItem("meetspace-display-name") ?? "";
   });
-  const { meeting, error: meetingError } = useMeetingMetadata(roomCode);
+  const {
+    meeting,
+    isLoading: isMeetingLoading,
+    error: meetingError,
+  } = useMeetingMetadata(roomCode);
   const username = userChoices?.username || fallbackUsername;
   const {
     token,
@@ -230,7 +234,7 @@ export function Room({ roomCode, initialUsername = "" }: RoomProps) {
   } = useParticipantToken({
     roomCode,
     username,
-    enabled: Boolean(userChoices && username),
+    enabled: Boolean(userChoices && username && meeting),
   });
   const { isPending: isRecordingPending, error: recordingError, toggleRecording } =
     useRecording({
@@ -239,6 +243,28 @@ export function Room({ roomCode, initialUsername = "" }: RoomProps) {
       isRecording: meeting?.recording?.isRecording ?? false,
       egressId: meeting?.recording?.egressId ?? null,
     });
+
+  if (isMeetingLoading) {
+    return (
+      <StatePanel
+        icon={<LoaderCircle className="h-7 w-7 animate-spin" />}
+        title="Loading meeting"
+        description="Checking the meeting status before connecting you to the room."
+      />
+    );
+  }
+
+  if (!meeting && !meetingError) {
+    return (
+      <StatePanel
+        icon={<AlertTriangle className="h-7 w-7" />}
+        title="Meeting not found"
+        description="This room code does not exist or is no longer available."
+        actionLabel="Back to dashboard"
+        onAction={() => router.push("/")}
+      />
+    );
+  }
 
   if (!userChoices) {
     return (

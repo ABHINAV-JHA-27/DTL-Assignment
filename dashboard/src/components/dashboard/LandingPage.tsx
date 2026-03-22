@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FirebaseError } from "firebase/app";
 import {
   ArrowRight,
   CalendarClock,
@@ -11,9 +10,7 @@ import {
   ShieldCheck,
   Video,
 } from "lucide-react";
-import { createMeeting, meetingExists } from "@/lib/firebase/meetings";
 import {
-  generateMeetingCode,
   getDefaultUsername,
   isMeetingCodeFormatValid,
   normalizeMeetingCode,
@@ -22,37 +19,11 @@ import {
 const SAVED_NAME_KEY = "meetspace-display-name";
 
 function getMeetingActionError(error: unknown, fallbackMessage: string) {
-  if (error instanceof FirebaseError) {
-    if (error.code === "permission-denied") {
-      return "Firestore denied the request. Update your Firestore rules to allow meeting reads and writes for this app.";
-    }
-
-    if (error.code === "unavailable") {
-      return "Firestore is unreachable from the browser. Check that Firestore is enabled for this Firebase project and try again with ad blockers or privacy shields disabled.";
-    }
-  }
-
   if (error instanceof Error) {
-    if (error.message.includes("client is offline")) {
-      return "Firestore could not be reached. Verify that Firestore is enabled for this project, then retry after disabling browser privacy blockers if needed.";
-    }
-
     return error.message;
   }
 
   return fallbackMessage;
-}
-
-async function generateUniqueMeetingCode() {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const code = generateMeetingCode();
-
-    if (!(await meetingExists(code))) {
-      return code;
-    }
-  }
-
-  throw new Error("Unable to reserve a meeting code. Please try again.");
 }
 
 export function LandingPage() {
@@ -84,14 +55,49 @@ export function LandingPage() {
     router.push(`/meet/${code}`);
   };
 
+  const createMeetingRequest = async (createdBy: string) => {
+    const response = await fetch("/api/meetings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ createdBy }),
+    });
+    const data = (await response.json()) as {
+      code?: string;
+      error?: string;
+    };
+
+    if (!response.ok || !data.code) {
+      throw new Error(data.error ?? "Unable to create a meeting right now.");
+    }
+
+    return data.code;
+  };
+
+  const validateMeetingCode = async (code: string) => {
+    const response = await fetch(
+      `/api/meetings?code=${encodeURIComponent(code)}`,
+      {
+        cache: "no-store",
+      },
+    );
+    const data = (await response.json()) as {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(data.error ?? "Unable to join the meeting.");
+    }
+  };
+
   const handleCreateMeeting = async () => {
     setPendingAction("create");
     setError(null);
 
     try {
       const name = getUsername();
-      const code = await generateUniqueMeetingCode();
-      await createMeeting(code, name);
+      const code = await createMeetingRequest(name);
       navigateToMeeting(code);
     } catch (requestError) {
       setError(
@@ -116,13 +122,7 @@ export function LandingPage() {
         throw new Error("Enter a valid 9-character meeting code.");
       }
 
-      const exists = await meetingExists(code);
-
-      if (!exists) {
-        throw new Error(
-          "Meeting code not found. Check the code and try again.",
-        );
-      }
+      await validateMeetingCode(code);
 
       getUsername();
       navigateToMeeting(code);

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FirebaseError } from "firebase/app";
-import { updateMeetingRecordingState } from "@/lib/firebase/meetings";
 
 type UseRecordingOptions = {
   roomCode: string;
@@ -50,30 +48,12 @@ export function useRecording({
       if (!response.ok) {
         throw new Error(data.error ?? "Unable to update recording state.");
       }
-
-      if (isRecording) {
-        await updateMeetingRecordingState(roomCode, {
-          isRecording: false,
-          egressId: null,
-          startedBy: null,
-        });
-      } else {
-        await updateMeetingRecordingState(roomCode, {
-          isRecording: true,
-          egressId: data.egressId ?? null,
-          startedBy: username,
-        });
-      }
     } catch (requestError) {
-      if (requestError instanceof FirebaseError) {
-        setError(requestError.message);
-      } else {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Unable to update recording state.",
-        );
-      }
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to update recording state.",
+      );
     } finally {
       setIsPending(false);
     }

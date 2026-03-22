@@ -34,12 +34,13 @@ It supports meeting creation and validation, a pre-join lobby, real-time audio/v
 1. A user opens the landing page and either creates or joins a room.
 2. Meeting metadata is read from or written to Firebase Firestore.
 3. The user enters the pre-join lobby and selects local devices.
-4. The client calls `/api/get-participant-token?room=<code>&username=<name>`.
-5. The API route uses `livekit-server-sdk` to mint a short-lived room token.
-6. The client mounts `LiveKitRoom` and connects to the LiveKit server.
-7. LiveKit handles media transport, subscriptions, data messages, and screen sharing.
-8. Recording controls call `/api/recording/start` and `/api/recording/stop`.
-9. Recording status is reflected back into Firebase metadata so all participants see it.
+4. The client calls `/api/meetings` to create a room or validate a join code through the server.
+5. The client calls `/api/get-participant-token?room=<code>&username=<name>`.
+6. The API route validates the room and uses `livekit-server-sdk` to mint a short-lived room token.
+7. The client mounts `LiveKitRoom` and connects to the LiveKit server.
+8. LiveKit handles media transport, subscriptions, data messages, and screen sharing.
+9. Recording controls call `/api/recording/start` and `/api/recording/stop`.
+10. Recording status is reflected back into Firebase metadata so all participants see it.
 
 ### Architecture Diagram
 
@@ -55,6 +56,7 @@ Browser (Next.js client)
   |     - meeting metadata
   |
   +--> Next.js API Routes
+        - /api/meetings
         - /api/get-participant-token
         - /api/recording/start
         - /api/recording/stop
@@ -85,7 +87,7 @@ Browser (Next.js client)
 
 - Persistence Layer
   - `src/lib/firebase/meetings.ts`
-  - Responsible for meeting creation, lookup, subscription, and recording metadata updates.
+  - Responsible for meeting lookup, subscription, and recording metadata updates.
 
 ## Tech Stack
 
@@ -337,6 +339,7 @@ npm run dev
 npm run build
 npm run start
 npm run lint
+npm test
 npm run verify:responsive
 ```
 
@@ -350,6 +353,8 @@ npm run verify:responsive
   - Starts the built production app.
 - `npm run lint`
   - Runs ESLint.
+- `npm test`
+  - Runs lightweight unit tests for core meeting-code utilities.
 - `npm run verify:responsive`
   - Runs the responsive layout verification script.
 
@@ -359,8 +364,10 @@ npm run verify:responsive
   - Landing page with create/join flows.
 - `/meet/[code]`
   - Pre-join and meeting room experience.
+- `/api/meetings`
+  - Server-owned meeting creation and join-code validation.
 - `/api/get-participant-token`
-  - Generates a LiveKit participant token.
+  - Validates the room and generates a LiveKit participant token.
 - `/api/recording/start`
   - Starts a room composite recording.
 - `/api/recording/stop`
@@ -430,4 +437,3 @@ The project has been validated with:
 - Production Firestore security rules
 - Persistent chat history
 - Better recording lifecycle visibility and download management
-
