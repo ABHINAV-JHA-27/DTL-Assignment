@@ -50,15 +50,18 @@ class HomeLaunchCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: busy ? null : onCreateMeeting,
-              child: busy
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Create Meeting'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: busy ? null : onCreateMeeting,
+                child: busy
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Create Meeting'),
+              ),
             ),
             const SizedBox(height: 20),
             Row(
@@ -86,9 +89,12 @@ class HomeLaunchCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: busy ? null : onJoinMeeting,
-              child: const Text('Join Meeting'),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: busy ? null : onJoinMeeting,
+                child: const Text('Join Meeting'),
+              ),
             ),
           ],
         ),

@@ -30,19 +30,58 @@ class MeetingCubit extends Cubit<MeetingState> {
     required bool microphoneEnabled,
     required bool cameraEnabled,
   }) async {
+    var resolvedMicrophoneEnabled = microphoneEnabled;
+    var resolvedCameraEnabled = cameraEnabled;
+
     emit(
       state.copyWith(
         status: MeetingStatus.connecting,
         access: access,
-        isMicrophoneEnabled: microphoneEnabled,
-        isCameraEnabled: cameraEnabled,
+        isMicrophoneEnabled: resolvedMicrophoneEnabled,
+        isCameraEnabled: resolvedCameraEnabled,
         clearFeedback: true,
         clearMessages: true,
       ),
     );
 
     try {
-      await _permissionService.ensureMediaPermissions();
+      final permissionResult = await _permissionService.requestMediaPermissions(
+        microphoneEnabled: resolvedMicrophoneEnabled,
+        cameraEnabled: resolvedCameraEnabled,
+      );
+
+      resolvedMicrophoneEnabled =
+          resolvedMicrophoneEnabled && permissionResult.microphoneGranted;
+      resolvedCameraEnabled =
+          resolvedCameraEnabled && permissionResult.cameraGranted;
+
+      if (!resolvedMicrophoneEnabled && !resolvedCameraEnabled) {
+        emit(
+          state.copyWith(
+            infoMessage:
+                'Microphone and camera permissions were denied. Joining without local media.',
+            isMicrophoneEnabled: false,
+            isCameraEnabled: false,
+          ),
+        );
+      } else if (microphoneEnabled && !resolvedMicrophoneEnabled) {
+        emit(
+          state.copyWith(
+            infoMessage:
+                'Microphone permission denied. Joining with microphone off.',
+            isMicrophoneEnabled: false,
+            isCameraEnabled: resolvedCameraEnabled,
+          ),
+        );
+      } else if (cameraEnabled && !resolvedCameraEnabled) {
+        emit(
+          state.copyWith(
+            infoMessage: 'Camera permission denied. Joining with camera off.',
+            isMicrophoneEnabled: resolvedMicrophoneEnabled,
+            isCameraEnabled: false,
+          ),
+        );
+      }
 
       final resolvedAccess = access.hasConnectionDetails
           ? access
@@ -54,8 +93,8 @@ class MeetingCubit extends Cubit<MeetingState> {
       final room = await _liveKitService.connect(
         serverUrl: resolvedAccess.serverUrl!,
         token: resolvedAccess.token!,
-        microphoneEnabled: microphoneEnabled,
-        cameraEnabled: cameraEnabled,
+        microphoneEnabled: resolvedMicrophoneEnabled,
+        cameraEnabled: resolvedCameraEnabled,
       );
 
       _bindRoom(room);
@@ -65,15 +104,14 @@ class MeetingCubit extends Cubit<MeetingState> {
           status: MeetingStatus.connected,
           room: room,
           access: resolvedAccess,
-          clearFeedback: true,
+          isMicrophoneEnabled: resolvedMicrophoneEnabled,
+          isCameraEnabled: resolvedCameraEnabled,
         ),
       );
     } on AppException catch (error) {
       emit(
         state.copyWith(
-          status: error.message == 'Permission Denied'
-              ? MeetingStatus.permissionDenied
-              : MeetingStatus.failure,
+          status: MeetingStatus.failure,
           errorMessage: error.message,
           clearRoom: true,
         ),

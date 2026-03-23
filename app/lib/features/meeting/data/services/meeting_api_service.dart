@@ -13,6 +13,53 @@ class MeetingApiService {
 
   final http.Client _client;
 
+  Future<MeetingAccess> createMeeting({
+    required String createdBy,
+  }) async {
+    final uri = Uri.parse(
+      '${AppConfig.backendBaseUrl}${AppConfig.meetingsPath}',
+    );
+
+    try {
+      final response = await _client
+          .post(
+            uri,
+            headers: const {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'createdBy': createdBy.trim(),
+            }),
+          )
+          .timeout(AppConfig.requestTimeout);
+      final body = _parseJson(response.body);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppException(
+          _extractError(
+            body,
+            fallback: 'Unable to create a meeting right now.',
+          ),
+          statusCode: response.statusCode,
+        );
+      }
+
+      final code = body['code'] as String?;
+      if (code == null || code.trim().isEmpty) {
+        throw const AppException('Meeting creation response was incomplete.');
+      }
+
+      return MeetingAccess(
+        roomCode: MeetingCode.normalize(code),
+        username: createdBy.trim(),
+      );
+    } on TimeoutException {
+      throw const AppException('Connection Timeout');
+    } on FormatException {
+      throw const AppException('Backend response was not valid JSON.');
+    }
+  }
+
   Future<MeetingAccess> fetchParticipantAccess({
     required String roomCode,
     required String username,
@@ -68,9 +115,33 @@ class MeetingApiService {
     required String username,
   }) async {
     try {
-      await fetchParticipantAccess(roomCode: roomCode, username: username);
+      final normalizedCode = MeetingCode.normalize(roomCode);
+      final uri = Uri.parse(
+        '${AppConfig.backendBaseUrl}${AppConfig.meetingsPath}',
+      ).replace(
+        queryParameters: {
+          'code': normalizedCode,
+        },
+      );
+
+      final response = await _client.get(uri).timeout(AppConfig.requestTimeout);
+      final body = _parseJson(response.body);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AppException(
+          _extractError(
+            body,
+            fallback: 'Unable to join the meeting.',
+          ),
+          statusCode: response.statusCode,
+        );
+      }
     } on AppException {
       rethrow;
+    } on TimeoutException {
+      throw const AppException('Connection Timeout');
+    } on FormatException {
+      throw const AppException('Backend response was not valid JSON.');
     } on Object {
       throw const AppException('Connection Timeout');
     }

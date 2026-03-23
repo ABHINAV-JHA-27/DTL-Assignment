@@ -151,19 +151,24 @@ class MeetingRoom extends StatelessWidget {
   }
 
   Future<void> _openChat(BuildContext context) async {
+    final meetingCubit = context.read<MeetingCubit>();
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF08111B),
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.82,
-        child: BlocBuilder<MeetingCubit, MeetingState>(
-          builder: (context, state) {
-            return ChatSheet(
-              messages: state.messages,
-              onSendMessage: onSendMessage,
-            );
-          },
+      builder: (_) => BlocProvider.value(
+        value: meetingCubit,
+        child: FractionallySizedBox(
+          heightFactor: 0.82,
+          child: BlocBuilder<MeetingCubit, MeetingState>(
+            builder: (context, state) {
+              return ChatSheet(
+                messages: state.messages,
+                onSendMessage: onSendMessage,
+              );
+            },
+          ),
         ),
       ),
     );

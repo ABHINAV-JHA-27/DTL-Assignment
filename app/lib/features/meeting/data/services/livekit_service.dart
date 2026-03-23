@@ -36,12 +36,18 @@ class LiveKitService {
       await room.localParticipant?.setCameraEnabled(cameraEnabled);
 
       return room;
+    } on TimeoutException {
+      await room.dispose();
+      throw const AppException('Connection Timeout');
     } on lk.LiveKitException catch (error) {
       await room.dispose();
-      if (error is TimeoutException) {
-        throw const AppException('Connection Timeout');
-      }
       throw AppException(error.message);
+    } on Exception catch (error) {
+      await room.dispose();
+      final message = error.toString().replaceFirst('Exception: ', '').trim();
+      throw AppException(
+        message.isEmpty ? 'Unable to connect to the room.' : message,
+      );
     } on Object {
       await room.dispose();
       throw const AppException('Unable to connect to the room.');

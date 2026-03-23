@@ -27,7 +27,7 @@ class MeetingRoomPage extends StatelessWidget {
           return;
         }
 
-        final message = state.errorMessage ?? state.infoMessage;
+        final message = state.infoMessage;
         if (message == null) {
           return;
         }

@@ -60,35 +60,45 @@ class _HomeView extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1080),
-              child: Padding(
+          child: LayoutBuilder(
+            builder: (context, viewportConstraints) {
+              return SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final wide = constraints.maxWidth > 820;
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: 1080,
+                      minHeight: viewportConstraints.maxHeight - 40,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final wide = constraints.maxWidth > 820;
 
-                    return Flex(
-                      direction: wide ? Axis.horizontal : Axis.vertical,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: wide ? 28 : 0,
-                              bottom: wide ? 0 : 24,
-                            ),
-                            child: const HomeHeroPanel(),
-                          ),
-                        ),
-                        const Expanded(child: _LaunchCard()),
-                      ],
-                    );
-                  },
+                        if (wide) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Expanded(child: HomeHeroPanel()),
+                              SizedBox(width: 28),
+                              Expanded(child: _LaunchCard()),
+                            ],
+                          );
+                        }
+
+                        return const Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            HomeHeroPanel(),
+                            SizedBox(height: 24),
+                            _LaunchCard(),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

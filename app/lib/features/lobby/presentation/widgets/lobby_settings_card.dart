@@ -8,6 +8,7 @@ class LobbySettingsCard extends StatelessWidget {
     required this.microphoneEnabled,
     required this.cameraEnabled,
     required this.errorMessage,
+    this.compact = false,
     required this.onToggleMicrophone,
     required this.onToggleCamera,
     required this.onJoin,
@@ -18,36 +19,49 @@ class LobbySettingsCard extends StatelessWidget {
   final bool microphoneEnabled;
   final bool cameraEnabled;
   final String? errorMessage;
+  final bool compact;
   final VoidCallback onToggleMicrophone;
   final VoidCallback? onToggleCamera;
   final VoidCallback? onJoin;
 
   @override
   Widget build(BuildContext context) {
+    final headingStyle = compact
+        ? Theme.of(context).textTheme.headlineLarge
+        : Theme.of(context).textTheme.headlineMedium;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(compact ? 20 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               access.roomCode,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: headingStyle?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: compact ? 6 : 8),
             Text(
               'Joining as ${access.username}',
-              style: const TextStyle(color: Colors.white70),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: compact ? 14 : 16,
+              ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: compact ? 16 : 24),
             SwitchListTile.adaptive(
               value: microphoneEnabled,
               onChanged: (_) => onToggleMicrophone(),
               title: const Text('Microphone'),
               subtitle: Text(microphoneEnabled ? 'Start unmuted' : 'Start muted'),
               contentPadding: EdgeInsets.zero,
+              dense: compact,
+              visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
             ),
             SwitchListTile.adaptive(
               value: cameraEnabled,
@@ -55,12 +69,14 @@ class LobbySettingsCard extends StatelessWidget {
               title: const Text('Camera'),
               subtitle: Text(cameraEnabled ? 'Join with video' : 'Join audio-only'),
               contentPadding: EdgeInsets.zero,
+              dense: compact,
+              visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
             ),
             if (errorMessage != null) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: compact ? 12 : 16),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(compact ? 14 : 16),
                 decoration: BoxDecoration(
                   color: const Color(0x33F87171),
                   borderRadius: BorderRadius.circular(18),
@@ -68,10 +84,13 @@ class LobbySettingsCard extends StatelessWidget {
                 child: Text(errorMessage!),
               ),
             ],
-            const Spacer(),
-            ElevatedButton(
-              onPressed: onJoin,
-              child: const Text('Join Meeting'),
+            SizedBox(height: compact ? 16 : 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onJoin,
+                child: const Text('Join Meeting'),
+              ),
             ),
           ],
         ),

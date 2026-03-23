@@ -6,12 +6,14 @@ class LobbyPreviewCard extends StatelessWidget {
     required this.track,
     required this.isBusy,
     required this.cameraEnabled,
+    this.compact = false,
     super.key,
   });
 
   final lk.LocalVideoTrack? track;
   final bool isBusy;
   final bool cameraEnabled;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class LobbyPreviewCard extends StatelessWidget {
           child: isBusy
               ? const CircularProgressIndicator()
               : !cameraEnabled || track == null
-                  ? const _PreviewPlaceholder()
+                  ? _PreviewPlaceholder(compact: compact)
                   : lk.VideoTrackRenderer(
                       track!,
                       fit: lk.VideoViewFit.cover,
@@ -42,26 +44,39 @@ class LobbyPreviewCard extends StatelessWidget {
 }
 
 class _PreviewPlaceholder extends StatelessWidget {
-  const _PreviewPlaceholder();
+  const _PreviewPlaceholder({required this.compact});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(24),
+    return Padding(
+      padding: EdgeInsets.all(compact ? 20 : 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.videocam_off_rounded, size: 72, color: Colors.white54),
-          SizedBox(height: 16),
+          Icon(
+            Icons.videocam_off_rounded,
+            size: compact ? 56 : 72,
+            color: Colors.white54,
+          ),
+          SizedBox(height: compact ? 12 : 16),
           Text(
             'Camera preview is off',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: compact ? 18 : 22,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          SizedBox(height: 8),
+          SizedBox(height: compact ? 6 : 8),
           Text(
             'Turn the camera back on to check framing before joining the room.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: compact ? 15 : 16,
+            ),
           ),
         ],
       ),

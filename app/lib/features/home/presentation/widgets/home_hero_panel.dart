@@ -6,6 +6,12 @@ class HomeHeroPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final headlineStyle = width < 420
+        ? theme.textTheme.displayMedium
+        : width < 900
+            ? theme.textTheme.displaySmall
+            : theme.textTheme.headlineLarge;
 
     return Container(
       padding: const EdgeInsets.all(28),
@@ -23,7 +29,7 @@ class HomeHeroPanel extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -36,7 +42,7 @@ class HomeHeroPanel extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             'Launch secure video rooms with a mobile-first meeting flow.',
-            style: theme.textTheme.displaySmall?.copyWith(
+            style: headlineStyle?.copyWith(
               fontWeight: FontWeight.w700,
               height: 1.1,
             ),
@@ -50,37 +56,8 @@ class HomeHeroPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 28),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: const [
-              _Badge(label: 'Dark meeting UI'),
-              _Badge(label: 'Runtime permissions'),
-              _Badge(label: 'In-room chat'),
-              _Badge(label: 'Responsive participant grid'),
-            ],
-          ),
         ],
       ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Text(label),
     );
   }
 }

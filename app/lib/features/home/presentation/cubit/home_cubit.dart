@@ -36,17 +36,30 @@ class HomeCubit extends Cubit<HomeState> {
 
     emit(state.copyWith(status: HomeStatus.submitting, clearFeedback: true));
 
-    final access = MeetingAccess(
-      roomCode: MeetingCode.generate(),
-      username: name,
-    );
+    try {
+      final access = await _apiService.createMeeting(createdBy: name);
 
-    emit(
-      state.copyWith(
-        status: HomeStatus.readyToNavigate,
-        pendingAccess: access,
-      ),
-    );
+      emit(
+        state.copyWith(
+          status: HomeStatus.readyToNavigate,
+          pendingAccess: access,
+        ),
+      );
+    } on AppException catch (error) {
+      emit(
+        state.copyWith(
+          status: HomeStatus.failure,
+          errorMessage: error.message,
+        ),
+      );
+    } on Object {
+      emit(
+        state.copyWith(
+          status: HomeStatus.failure,
+          errorMessage: 'Connection Timeout',
+        ),
+      );
+    }
   }
 
   Future<void> joinMeeting() async {
