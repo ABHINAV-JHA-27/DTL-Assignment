@@ -5,11 +5,13 @@ class ParticipantTile extends StatelessWidget {
   const ParticipantTile({
     required this.participant,
     required this.isLocal,
+    this.compact = false,
     super.key,
   });
 
   final lk.Participant participant;
   final bool isLocal;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class ParticipantTile extends StatelessWidget {
         final videoTrack = track is lk.VideoTrack ? track : null;
 
         return ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(compact ? 20 : 24),
           child: DecoratedBox(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -50,11 +52,14 @@ class ParticipantTile extends StatelessWidget {
                         : lk.VideoViewMirrorMode.off,
                   )
                 else
-                  _ParticipantPlaceholder(name: name),
+                  _ParticipantPlaceholder(
+                    name: name,
+                    compact: compact,
+                  ),
                 Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
+                  left: compact ? 8 : 12,
+                  right: compact ? 8 : 12,
+                  bottom: compact ? 8 : 12,
                   child: Row(
                     children: [
                       Expanded(
@@ -65,7 +70,7 @@ class ParticipantTile extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.55),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(compact ? 14 : 16),
                           ),
                           child: Row(
                             children: [
@@ -73,8 +78,9 @@ class ParticipantTile extends StatelessWidget {
                                 child: Text(
                                   isLocal ? '$name (You)' : name,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
+                                    fontSize: compact ? 13 : 16,
                                   ),
                                 ),
                               ),
@@ -83,7 +89,7 @@ class ParticipantTile extends StatelessWidget {
                                 participant.isSpeaking
                                     ? Icons.graphic_eq_rounded
                                     : Icons.person_rounded,
-                                size: 18,
+                                size: compact ? 16 : 18,
                                 color: participant.isSpeaking
                                     ? const Color(0xFF5EEAD4)
                                     : Colors.white70,
@@ -105,9 +111,13 @@ class ParticipantTile extends StatelessWidget {
 }
 
 class _ParticipantPlaceholder extends StatelessWidget {
-  const _ParticipantPlaceholder({required this.name});
+  const _ParticipantPlaceholder({
+    required this.name,
+    required this.compact,
+  });
 
   final String name;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -123,20 +133,24 @@ class _ParticipantPlaceholder extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
-            radius: 34,
+            radius: compact ? 24 : 34,
             backgroundColor: const Color(0xFF17324B),
             child: Text(
               initials.isEmpty ? '?' : initials,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: compact ? 18 : 24,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: compact ? 10 : 14),
           Text(
             name,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: compact ? 14 : 18,
               fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

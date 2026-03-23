@@ -66,35 +66,64 @@ class MeetingRoom extends StatelessWidget {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: AnimatedBuilder(
                       animation: room,
                       builder: (context, _) {
-                        final participants = _participants(room);
-
                         return LayoutBuilder(
                           builder: (context, constraints) {
-                            final columns = _columnCount(
-                              width: constraints.maxWidth,
-                              participantCount: participants.length,
+                            final localParticipant = room.localParticipant;
+                            final remoteParticipants =
+                                _remoteParticipants(room);
+                            final showFloatingPreview =
+                                localParticipant != null &&
+                                remoteParticipants.isNotEmpty;
+                            final previewWidth = _localPreviewWidth(
+                              constraints.maxWidth,
                             );
 
-                            return GridView.builder(
-                              padding: const EdgeInsets.only(top: 12, bottom: 12),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columns,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.78,
-                              ),
-                              itemCount: participants.length,
-                              itemBuilder: (context, index) {
-                                final participant = participants[index];
-                                return ParticipantTile(
-                                  participant: participant,
-                                  isLocal: participant is lk.LocalParticipant,
-                                );
-                              },
+                            return Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: _ParticipantStage(
+                                    remoteParticipants: remoteParticipants,
+                                    localParticipant: localParticipant,
+                                    maxWidth: constraints.maxWidth,
+                                    maxHeight: constraints.maxHeight,
+                                  ),
+                                ),
+                                if (showFloatingPreview)
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: SizedBox(
+                                      width: previewWidth,
+                                      child: AspectRatio(
+                                        aspectRatio: 0.72,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(alpha: 0.16),
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.22),
+                                                blurRadius: 24,
+                                                offset: const Offset(0, 10),
+                                              ),
+                                            ],
+                                          ),
+                                          child: ParticipantTile(
+                                            participant: localParticipant,
+                                            isLocal: true,
+                                            compact: true,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             );
                           },
                         );
@@ -119,35 +148,38 @@ class MeetingRoom extends StatelessWidget {
     );
   }
 
-  List<lk.Participant> _participants(lk.Room room) {
-    final participants = <lk.Participant>[];
-    final local = room.localParticipant;
-
-    if (local != null) {
-      participants.add(local);
-    }
-
-    participants.addAll(room.remoteParticipants.values);
+  List<lk.Participant> _remoteParticipants(lk.Room room) {
+    final participants = room.remoteParticipants.values.toList()
+      ..sort((a, b) => _participantRank(b).compareTo(_participantRank(a)));
     return participants;
   }
 
-  int _columnCount({
-    required double width,
-    required int participantCount,
-  }) {
-    if (participantCount <= 1) {
-      return 1;
+  int _participantRank(lk.Participant participant) {
+    var rank = 0;
+    if (participant.isSpeaking) {
+      rank += 4;
     }
-
-    if (width > 1100 && participantCount > 4) {
-      return 3;
+    if (_hasVisibleVideo(participant)) {
+      rank += 2;
     }
-
-    if (width > 720) {
-      return 2;
+    if (participant.connectionQuality != lk.ConnectionQuality.poor) {
+      rank += 1;
     }
+    return rank;
+  }
 
-    return 1;
+  bool _hasVisibleVideo(lk.Participant participant) {
+    final publication = participant.getTrackPublicationBySource(
+          lk.TrackSource.camera,
+        ) ??
+        participant.getTrackPublicationBySource(
+          lk.TrackSource.screenShareVideo,
+        );
+    return publication?.track is lk.VideoTrack && !(publication?.muted ?? true);
+  }
+
+  double _localPreviewWidth(double maxWidth) {
+    return (maxWidth * 0.24).clamp(92.0, 124.0);
   }
 
   Future<void> _openChat(BuildContext context) async {
@@ -171,6 +203,98 @@ class MeetingRoom extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ParticipantStage extends StatelessWidget {
+  const _ParticipantStage({
+    required this.remoteParticipants,
+    required this.localParticipant,
+    required this.maxWidth,
+    required this.maxHeight,
+  });
+
+  final List<lk.Participant> remoteParticipants;
+  final lk.LocalParticipant? localParticipant;
+  final double maxWidth;
+  final double maxHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    if (remoteParticipants.isEmpty) {
+      if (localParticipant == null) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: const Center(
+            child: Text(
+              'Waiting for others to join...',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+        );
+      }
+
+      return ParticipantTile(
+        participant: localParticipant!,
+        isLocal: true,
+      );
+    }
+
+    if (remoteParticipants.length == 1) {
+      return ParticipantTile(
+        participant: remoteParticipants.first,
+        isLocal: false,
+      );
+    }
+
+    const pageSize = 4;
+    final pages = <List<lk.Participant>>[];
+    for (var index = 0; index < remoteParticipants.length; index += pageSize) {
+      final end = (index + pageSize).clamp(0, remoteParticipants.length);
+      pages.add(remoteParticipants.sublist(index, end));
+    }
+
+    return PageView.builder(
+      controller: PageController(viewportFraction: 1),
+      padEnds: false,
+      itemCount: pages.length,
+      itemBuilder: (context, pageIndex) {
+        final pageParticipants = pages[pageIndex];
+        final columns = pageParticipants.length == 2 ? 1 : 2;
+        final rows = (pageParticipants.length / columns).ceil();
+        const spacing = 12.0;
+        final gridWidth = maxWidth;
+        final gridHeight = maxHeight;
+        final tileWidth = (gridWidth - (spacing * (columns - 1))) / columns;
+        final tileHeight = (gridHeight - (spacing * (rows - 1))) / rows;
+        final aspectRatio = tileWidth / tileHeight;
+
+        return Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: pageParticipants.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+              childAspectRatio: aspectRatio,
+            ),
+            itemBuilder: (context, index) {
+              final participant = pageParticipants[index];
+              return ParticipantTile(
+                participant: participant,
+                isLocal: false,
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

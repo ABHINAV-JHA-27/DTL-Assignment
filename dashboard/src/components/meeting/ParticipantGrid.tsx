@@ -5,7 +5,7 @@ import {
   isTrackReference,
   useTracks,
 } from "@livekit/components-react";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, UserRound, VideoOff } from "lucide-react";
 import { Track } from "livekit-client";
 
 function TrackTile({
@@ -19,13 +19,16 @@ function TrackTile({
   fit?: "contain" | "cover";
   className?: string;
 }) {
-  if (!isTrackReference(track)) {
-    return null;
-  }
-
   const participantLabel =
     track.participant.name || track.participant.identity || "Participant";
-  const isScreenShare = track.publication?.source === Track.Source.ScreenShare;
+  const initials = participantLabel
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "P";
+  const isPlaceholder = !isTrackReference(track);
+  const isScreenShare = track.source === Track.Source.ScreenShare;
 
   return (
     <div
@@ -33,18 +36,40 @@ function TrackTile({
         highlighted ? "border-sky-400/20" : "border-white/10"
       } ${className}`}
     >
-      <VideoTrack
-        trackRef={track}
-        className={`h-full w-full bg-slate-950 ${
-          fit === "contain" ? "object-contain" : "object-cover"
-        }`}
-      />
+      {isPlaceholder ? (
+        <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_35%),linear-gradient(180deg,_rgba(15,23,42,0.98),_rgba(2,6,23,1))] px-6 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-lg shadow-slate-950/40">
+            {initials.length <= 2 ? (
+              <span className="text-2xl font-semibold tracking-[0.14em]">
+                {initials}
+              </span>
+            ) : (
+              <UserRound className="h-9 w-9" />
+            )}
+          </div>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200">
+            <VideoOff className="h-4 w-4 text-slate-400" />
+            Camera off
+          </div>
+        </div>
+      ) : (
+        <VideoTrack
+          trackRef={track}
+          className={`h-full w-full bg-slate-950 ${
+            fit === "contain" ? "object-contain" : "object-cover"
+          }`}
+        />
+      )}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent px-4 pb-4 pt-10">
         <div className="flex items-center justify-between gap-3 text-sm text-slate-100">
           <span className="truncate font-medium">{participantLabel}</span>
           {isScreenShare ? (
             <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-xs font-semibold text-sky-100">
               Presenting
+            </span>
+          ) : isPlaceholder ? (
+            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200">
+              Placeholder
             </span>
           ) : null}
         </div>
@@ -55,7 +80,10 @@ function TrackTile({
 
 export function ParticipantGrid() {
   const tracks = useTracks(
-    [Track.Source.Camera, Track.Source.ScreenShare],
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
     { onlySubscribed: false },
   );
 
@@ -78,14 +106,17 @@ export function ParticipantGrid() {
     );
   }
 
-  const screenShareTracks = tracks.filter(
-    (track) => track.publication?.source === Track.Source.ScreenShare,
+  const primaryTrack = tracks.find(
+    (track) => isTrackReference(track) && track.source === Track.Source.ScreenShare,
   );
-  const hasActiveScreenShare = screenShareTracks.length > 0;
-  const primaryTrack = hasActiveScreenShare ? screenShareTracks[0] : null;
-  const secondaryTracks = primaryTrack
+  const primaryTrackSid = isTrackReference(primaryTrack)
+    ? primaryTrack.publication.trackSid
+    : null;
+  const secondaryTracks = primaryTrackSid
     ? tracks.filter(
-        (track) => track.publication?.trackSid !== primaryTrack.publication.trackSid,
+        (track) =>
+          !isTrackReference(track) ||
+          track.publication.trackSid !== primaryTrackSid,
       )
     : tracks;
 
